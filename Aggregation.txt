@@ -1,0 +1,5 @@
+Group By
+Having
+Group By로 어떤 대상으로 묶을지 지정
+Having으로 한번 더 거르기
+
