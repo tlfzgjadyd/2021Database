@@ -1,0 +1,9 @@
+create user '유저명'@'localhost' identified by '비밀번호';
+drop user '유저명'@'localhost';
+grant all privileges on *.* to '유저명'@~ //이럼 다주는거니까 root계정이나 다름없어짐
+//만약 sample.*하면 sample 데이터베이스 밑의 모든 테이블 권한을 주겠다
+//만약 grant select, insert, update on sample.* to '유저명'@~하면 일부 권한만 준다고
+
+flush privileges; //이거 해야 권한관련 변경사항 반영됨
+show frants for'유저명'@~ //권한들 확인하기
+revoke all on //권한 삭제
