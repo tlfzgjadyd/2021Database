@@ -10,5 +10,6 @@
   <term name="고용일" physicalName="hire_date"/>
   <term name="시작일" physicalName="from_date"/>
   <term name="종료일" physicalName="to_date"/>
-  <term name=""/>
+  <term name="급여" physicalName="salary"/>
+  <term name="제목" physicalName="title"/>
 </tm:TermDictionary>
