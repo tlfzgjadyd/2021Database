@@ -1,0 +1,170 @@
+< 실습 필기 >
+
+1) < 지난시간 > 
+
+mysql에서 트랜잭션 어떻게 다루고
+락이 뭐냐
+그때 mysql에선 특이하게 트랜잭션이 스토리지 엔진에 따라 지원여부 갈린다
+보통 innoDB로 mysql에선 트랜잭션쓰고
+커밋이냐 롤백이냐라는 부분 다뤘고
+여러 트랜잭션 동시 실행될때 어떤 트랜잭션이 특정 레코드 접근시 다른 트랜잭션 접근 막는 락
+이제 트랜잭션은 RDBMS의 간판 기능이 됐고 
+커밋 롤백을 다루는건 원자성 ACID중 A
+여러줄 쿼리가 한번에 실행되느냐 문제 생기면 롤백하느냐 이거지
+트랜잭션은 일관 격리 내구성 보장돼야하는데 원자성이 간판 기능이란거지
+유명한거 3개중엔 innoDB만 트랜잭션 지원한다
+지난시간 복습 중간부터는 생략
+======================================================
+2) < ppt JDBC >
+
+지금까진 sql했잖아 로그인된 상태에 sql치는 형태로 썻는데
+이런 것보다는 db+앱으로 쿼리 날리는 경우가 더 많다
+지금까지는 자바로 jdbc 통해서 하는 경우가 많다
+가장 흔한 상황이 jsp나 자바로 접근하는 방법이라 jdbc 배울것임
+
+내가 깐 드라이버가 어떤 타입인지 알아야됨
+퓨어 자바로 짠 드라이버냐 아니냐 이런거
+처음엔 odbc(open database connectivity)가 원조라 이게 많이 퍼져있음
+그래서 odbc랑 이어서 jdbc하는게 많았는데 지금은 잘 안씀 둘다 깔아야해서
+그리고 100퍼 자바가 아니라 플랫폼 독립성 이런게 사라진다
+그냥 이런게 있다고만 이해하면 됨
+타입4가 보통 우리가 쓰는거임
+여기서 범용, 특화 드라이버가 뭔뜻이냐
+: jdbc 자체가 mysql/sqlserver/oracle 뭘 쓰던 범용 드라이버 형태로 나온게 odbc jdbc임
+타입4는 접속은 범용으로 되지만 해당 db에 특화된 기능 제공함
+타입3은 일종의 범용이라 db 각각에 맞춘 기능 다 제공하기는 어렵다
+======================================================
+3) < JDBC 실습(준비) >
+
+#으로 들어감
+open자바 깔고
+볼드체로 돼있는게 커넥터
+그다음 톰캣 깔음 (원래는 자바로도 가능하지만 jsp에서 자바 연동하려면 톰캣 설치)
+폴더 들어가면 커넥터 깔린 jar이 있음 그걸 ln -s를 통해 심볼릭 링크로 톰캣에 연동함
+그다음 톰캣 띄워줌
+======================================================
+4) < JDBC 실습 >
+
+jsp로 접근할 경우 jsp는 8080번 포트를 씀
+그래서 가상머신 기반의 포트 포워딩을 해줘야됨
+======================================================
+5) < JDBC 프로그램 구조 >
+
+Class.forName으로 로딩함
+Class라는 이름의 클래스 (리플렉션 : )
+
+그다음 접속은 2번처럼 하고 dburl은 어디에 접속할지다
+id, 비번도 넣어서 접속하고 접속 성공시 Connection타입의 객체가 생김
+
+그럼 3번에서 그 Connection타입 객체를 가지고 statement 오브젝트를 생성함
+
+그럼 statement에 sql 집어넣어서 실행함
+이때 executeUpdate는 CRUD중 CUD, executeQUery는 R
+
+결과는 resultset객체에 넣어놓고
+rs.next()있으면 레코드 한줄씩 읽어오면서 정보 읽어와서 각 타입의 변수에 집어넣음
+
+이 순서가 대표적인 JDBC 모양의 패턴입니다
+
+1. 드라이버 로딩
+2. 데이터베이스 매니저를 통해서 db 접속
+   접속되면 Connection 객체 만들고
+3. 그걸 가지고 Statement 객체 생성
+4. executeQuery를 통해서 ResultSet을 생성(이때 그냥 execute는 executeQuery 줄임말임)
+5. ResultSet 받아서 한줄씩 돌면서 레코드 출력하기
+
+이때 A가 B를 만들고 B가 C를 만들고 이런식으로 짜는걸 빌더패턴이라고 한다(참고만)
+======================================================
+6) < JDBC 실습 코드 >
+
+# nano /var/lib/tomcat8/webapps/ROOT/sample.jsp
+-> Root폴더가 기본 폴더란 말이고 그 안에 sample.jsp를 만들겠단 명령임
+
+<%@ page import = "java.sql.*" %>
+//맨 처음에 java.sql 패키지를 로딩했음 jsp에선 이걸 무조건 해야됨
+//밑에 있는 resultset이니 이런게 다 java.sql패키지 안에 있다
+
+<% Statement stmt = null; ResultSet rs = null;
+Class.forName("com.mysql.jdbc.Driver");
+//mysql의 경우 이름이 이거임 com.mysql.jdbc.Driver 드라이버 첫글자만 대문자인거 잘봐야됨
+
+String dbUrl = "jdbc:mysql://localhost:3306/employees?useSSL=false";
+//mysql의 경우 db이름은 이렇게 간다 mysql이 서버 클라이언트로 돼있기 떄문에 통신시
+//3306번을 쓴다는 의미다 이건 톰캣 아래에서 mysql 같이깔면 문제 안돼서 포트포워딩 따로 안했다
+//그리고 employees 뒤에 있는건 뭐냐면 employees라는 db에 접근하겠다는 의미임(전에 깔았던거)
+
+  
+Connection conn = DriverManager.getConnection(dbUrl, "root", "mysql");
+//id는 root 비번은 mysql이다
+
+try { 
+           stmt = conn.createStatement();//위에서 배웠지 statement 생성하기
+ 	if(stmt.execute("select * from employees.employees limit 10;")) {//state에 sql넣고 실행시킴
+		 rs = stmt.getResultSet(); }//성공시 result set 받아오라는 의미인데 그냥 rs=stmt.execute 바로해도됨
+ 		 
+                       while(rs.next()) { //루프돌며 html포맷으로 출력
+		   out.println(rs.getString("first_name"));//칼럼명 확인해야됨 직원 이름 출력 후
+	               out.println(rs.getString("last_name"));
+ 		    out.write("<br/>"); }, //개행하고있음
+ 		rs.close(); stmt.close();//다되면 닫아줌
+		} catch(Exception e) {
+ 		     out.println("SQL exception!");
+		}
+conn.close(); %>//이때 %와 앵글브라켓으로 닫아야한다
+ctrl-O(저장) / ctrl-x(종료)
+======================================================
+7) < ip확인 >
+
+"IPAddress": "172.17.0.2",
+======================================================
+8) < sudo docker run >
+
+--name=기존돌리던 우분투랑 충돌 안되게 2한것
+그다음 ubuntu:버전 나는 14.04.5
+이렇게 돌렸더니 #상태로 들어왔다 여기서 apt update, jdk설치 등등 한다
+======================================================
+9) < ipconfig로 알아냈음 wsl돼있는부분>
+
+172.20.16.1:8080
+172.30.224.1:8080
+매번바뀜
+======================================================
+10) < 
+apt install bzip2
+bzip2 -d employees_db-full-1.0.6.tar
+cd employees_db
+ls
+mysql -uroot -p
+source employees.sql
+use employees;
+show tables;
+desc employees;
+cd /var/lib/tomcat8/webapps/ROOT
+vi sample.jsp
+웹으로 접속, /sample.jsp
+
+======================================================
+11) < ppt statement의 종류 >
+
+3종류있다
+그냥 statement는 dynamic sql이라고 부르는걸로 1줄씩 번역하는데
+prepared statement는 한번에 모아서 번역해놓고 실행해서 static sql이라 부른다
+그래서 속도상에 장점이 있다
+근데 무조건 다 빨라지는건 아니고
+전부 insert문만 반복하는것처럼 반복구조라야 의미있다
+
+callable statement는 주로 쓸 일 없다
+======================================================
+12) < ppt prepared statement 실습 >
+
+코드를 살펴볼건데
+String SQL = "insert into employees (empno, last_name, first_name) values(?, ?, ?);";
+???있는건 미리 결정하지 않는다는 뜻이다
+여기서 empno, last_name, first_name은 뒤에있는 각 물음표의 카테고리에 해당한다
+아래쪽에 pstmt.setInt있는데 
+pstmt.setInt(1, 1); pstmt.setString(2, "Ha"); pstmt.setString(3, "Seokjae");
+이것은 각각
+첫번째 물음표엔, 1을넣고
+2번째 물음표엔, "Ha"를 넣고
+3번째 물음표엔, "Seokjae"를 넣는다는 뜻이다
+======================================================
